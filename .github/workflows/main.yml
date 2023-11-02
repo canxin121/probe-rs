@@ -1,0 +1,38 @@
+name: Release
+
+permissions:
+  contents: write
+
+on:
+  push:
+    tags:
+      - '**[0-9]+.[0-9]+.[0-9]+*'
+  pull_request:
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          export PATH="$HOME/.cargo/bin:$PATH"
+      - name: Install cross tool
+        run: cargo install cross
+      - name: Set up QEMU
+        run: sudo apt-get update && sudo apt-get install -y qemu-user-static
+      - name: Build aarch64 Linux musl version
+        run: cross build --target aarch64-unknown-linux-musl --release
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: target/aarch64-unknown-linux-musl/release/your_executable
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: release-artifacts
+          path: target/aarch64-unknown-linux-musl/release/
